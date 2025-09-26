@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Interactive Input</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+        #message {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        #answer-input {
+            padding: 10px;
+            font-size: 1em;
+            border: 2px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <p id="message">What's the secret word?</p>
+
+    <input type="text" id="answer-input" placeholder="Type your answer here">
+
+    <script>
+        // --- JavaScript Code for Interaction ---
+
+        // The correct answer for now
+        const CORRECT_ENTRY = "correct";
+
+        // Get the elements from the HTML
+        const messageElement = document.getElementById('message');
+        const inputElement = document.getElementById('answer-input');
+
+        // Function to check the input and update the page
+        function checkInput() {
+            // Get the value from the input box and convert to lowercase for flexible checking
+            const userInput = inputElement.value.toLowerCase().trim();
+
+            if (userInput === CORRECT_ENTRY) {
+                // If the answer is correct
+                messageElement.textContent = "🥳 Correct! The page is now updated.";
+                messageElement.style.color = "green";
+                inputElement.style.borderColor = "green";
+                inputElement.disabled = true; // Disable the box after a correct entry
+
+            } else {
+                // If the answer is incorrect
+                messageElement.textContent = "❌ Incorrect. Try again or check the hint!";
+                messageElement.style.color = "red";
+                inputElement.style.borderColor = "red";
+            }
+        }
+
+        // Add an "event listener" to the input box.
+        // This makes the 'checkInput' function run every time the user hits the Enter key.
+        inputElement.addEventListener('keydown', function(event) {
+            // Check if the key pressed is the Enter key (key code 13 or key name 'Enter')
+            if (event.key === 'Enter') {
+                checkInput();
+            }
+        });
+    </script>
+
+</body>
+</html>
