@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Scavenger Hunt</title>
+<title>Explorers Scavenger Hunt</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
   body { font-family: Arial,sans-serif; background:#121212; color:#eee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
@@ -21,15 +21,15 @@
   <h2>Team Login</h2>
   <input id="teamName" placeholder="Team name (unique)" />
   <select id="courseSelect">
-    <option value="">Select starting course</option>
-    <option value="A">Course A</option>
-    <option value="B">Course B</option>
-    <option value="C">Course C</option>
-    <option value="D">Course D</option>
+    <option value="">Select starting position</option>
+    <option value="A">A</option>
+    <option value="B">B</option>
+    <option value="C">C</option>
+    <option value="D">D</option>
   </select>
   <button id="startBtn">Start Game</button>
-  <button id="resetBtn" style="background:#b22222;">Reset Progress</button>
-  <p class="small">Good luck!</p>
+  <button id="resetBtn" style="background:#b22222;">Reset Team Progress</button>
+  <p class="small">Good luck!!</p>
 </div>
 
 <div class="card" id="gameScreen" style="display:none;">
@@ -96,7 +96,7 @@ startBtn.addEventListener('click', () => {
     teams[name] = { course, startIndex:startIdx, index:0, log:[], finished:false };
     saveTeams();
   }
-  teamBanner.textContent = `Team: ${currentTeam} (Course ${teams[name].course})`;
+  teamBanner.textContent = `Team: ${currentTeam} (${teams[name].course})`;
   loginScreen.style.display='none';
   gameScreen.style.display='block';
   showQuestion();
@@ -129,12 +129,12 @@ function showQuestion(){
     answerInput.style.display='none';
     submitBtn.style.display='none';
     feedbackEl.className='';
-    feedbackEl.textContent = `🎉 Congrats, ${currentTeam}! You completed all ${questions.length} questions.`;
+    feedbackEl.textContent = `🎉 Congrats, ${currentTeam}! You completed all locations, now go back to Clifford's Tower! `;
     return;
   }
   const qIdx = getQuestionIndex(t);
   const q = questions[qIdx];
-  locationTitle.textContent = `${q.location} (Question ${t.index+1})`;
+  locationTitle.textContent = `${q.location} (Location ${t.index+1})`;
   questionText.textContent = q.question;
   answerInput.value='';
   feedbackEl.textContent='';
