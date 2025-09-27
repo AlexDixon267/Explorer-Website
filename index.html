@@ -167,7 +167,7 @@ submitBtn.addEventListener('click', () => {
     // --- Send correct answer to Google Form ---
     const fd = new FormData();
     fd.append(FIELD_TEAM, currentTeam);
-    fd.append(FIELD_LOCATION, q.location);
+    fd.append(FIELD_LOCATION, q.name);
     fd.append(FIELD_TIME, ts);
     fetch(FORM_URL, { method:'POST', body:fd }).catch(err=>console.warn("Logging error:", err));
 
