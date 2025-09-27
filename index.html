@@ -47,11 +47,11 @@
 
 <script>
 let questions = [];
-let teams = {}; // { teamName: { course, index, log, finished } }
+let teams = {}; // { teamName: { course, startIndex, index, answered, log, finished } }
 let currentTeam = null;
 
 const startingPoints = { A:1, B:4, C:7, D:10 }; 
-// zero-based index → Q2 = index 1, Q5 = index 4, etc.
+// zero-based index: A→Q2, B→Q5, C→Q8, D→Q11
 
 // Load questions
 fetch('questions.json')
@@ -96,9 +96,12 @@ startBtn.addEventListener('click', () => {
 
   currentTeam = name;
   if (!teams[name]) {
+    const startIdx = startingPoints[course];
     teams[name] = { 
       course, 
-      index: startingPoints[course], 
+      startIndex: startIdx, 
+      index: 0, // position in "answered" order
+      answered: [], 
       log: [], 
       finished: false 
     };
@@ -127,17 +130,23 @@ resetBtn.addEventListener('click', () => {
   }
 });
 
+// Compute the actual question index based on start point + progress
+function getQuestionIndex(team) {
+  return (team.startIndex + team.index) % questions.length;
+}
+
 // Show question
 function showQuestion() {
   const t = teams[currentTeam];
   if (t.finished || t.index >= questions.length) {
     locationTitle.textContent = "🎉 Congrats!";
-    questionText.textContent = "You’ve completed all your questions!";
+    questionText.textContent = "You’ve completed all 12 questions!";
     answerInput.style.display='none';
     submitBtn.style.display='none';
     return;
   }
-  const q = questions[t.index];
+  const qIdx = getQuestionIndex(t);
+  const q = questions[qIdx];
   locationTitle.textContent = `${q.location}`;
   questionText.textContent = q.question;
   answerInput.value='';
@@ -151,12 +160,14 @@ submitBtn.addEventListener('click', () => {
   const t = teams[currentTeam];
   if (t.finished) return;
 
-  const q = questions[t.index];
+  const qIdx = getQuestionIndex(t);
+  const q = questions[qIdx];
   const ans = answerInput.value.trim().toLowerCase();
   if (!ans) return;
   if (ans === q.answer.toLowerCase()) {
     const ts = new Date().toLocaleTimeString();
     t.log.push(`✔ ${q.location} solved at ${ts}`);
+    t.answered.push(qIdx);
     t.index++;
     if (t.index >= questions.length) {
       t.finished = true;
@@ -178,3 +189,4 @@ function updateProgressLogUI() {
 </script>
 </body>
 </html>
+
