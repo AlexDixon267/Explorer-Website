@@ -157,5 +157,9 @@ adminBtn.addEventListener('click', () => {
   }
 });
 
-function
+function renderLeaderboard() {
+  leaderboardBody.innerHTML='';
+  const rows = Object.entries(teams).map(([name,t])=>{
+    return `<tr>
+      <td>${name}</td>
 
