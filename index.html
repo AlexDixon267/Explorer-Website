@@ -1,70 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Simple Interactive Input</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-        }
-        #message {
-            font-size: 1.2em;
-            margin-bottom: 20px;
-        }
-        #answer-input {
-            padding: 10px;
-            font-size: 1em;
-            border: 2px solid #ccc;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Game Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #222;
+      color: #eee;
+      display: flex;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+    }
+    .login-box {
+      background: #333;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      width: 300px;
+      text-align: center;
+    }
+    input, select, button {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      width: 100%;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: #45a049;
+    }
+  </style>
 </head>
 <body>
+  <div class="login-box">
+    <h2>Team Login</h2>
+    <form id="loginForm">
+      <input type="text" id="teamName" placeholder="Enter Team Name" required />
+      <select id="course" required>
+        <option value="">Select Course</option>
+        <option value="A">Course A</option>
+        <option value="B">Course B</option>
+        <option value="C">Course C</option>
+        <option value="D">Course D</option>
+      </select>
+      <button type="submit">Enter</button>
+    </form>
+  </div>
 
-    <p id="message">What's the secret word?</p>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      const teamName = document.getElementById("teamName").value.trim();
+      const course = document.getElementById("course").value;
 
-    <input type="text" id="answer-input" placeholder="Type your answer here">
+      if (!teamName || !course) {
+        alert("Please enter your team name and select a course.");
+        return;
+      }
 
-    <script>
-        // --- JavaScript Code for Interaction ---
+      // Store team name in local storage (so next page can use it if needed)
+      localStorage.setItem("teamName", teamName);
 
-        // The correct answer for now
-        const CORRECT_ENTRY = "correct";
-
-        // Get the elements from the HTML
-        const messageElement = document.getElementById('message');
-        const inputElement = document.getElementById('answer-input');
-
-        // Function to check the input and update the page
-        function checkInput() {
-            // Get the value from the input box and convert to lowercase for flexible checking
-            const userInput = inputElement.value.toLowerCase().trim();
-
-            if (userInput === CORRECT_ENTRY) {
-                // If the answer is correct
-                messageElement.textContent = "🥳 Correct! The page is now updated.";
-                messageElement.style.color = "green";
-                inputElement.style.borderColor = "green";
-                inputElement.disabled = true; // Disable the box after a correct entry
-
-            } else {
-                // If the answer is incorrect
-                messageElement.textContent = "❌ Incorrect. Try again or check the hint!";
-                messageElement.style.color = "red";
-                inputElement.style.borderColor = "red";
-            }
-        }
-
-        // Add an "event listener" to the input box.
-        // This makes the 'checkInput' function run every time the user hits the Enter key.
-        inputElement.addEventListener('keydown', function(event) {
-            // Check if the key pressed is the Enter key (key code 13 or key name 'Enter')
-            if (event.key === 'Enter') {
-                checkInput();
-            }
-        });
-    </script>
-
+      // Redirect to different course pages
+      switch(course) {
+        case "A":
+          window.location.href = "courseA.html";
+          break;
+        case "B":
+          window.location.href = "courseB.html";
+          break;
+        case "C":
+          window.location.href = "courseC.html";
+          break;
+        case "D":
+          window.location.href = "courseD.html";
+          break;
+        default:
+          alert("Invalid course selection.");
+      }
+    });
+  </script>
 </body>
 </html>
