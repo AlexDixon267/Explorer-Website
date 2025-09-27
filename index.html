@@ -7,13 +7,11 @@
   <style>
     body { font-family: Arial, sans-serif; background:#121212; color:#eee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
     .card { background:#1f1f1f; padding:20px; border-radius:12px; width:420px; box-shadow:0 6px 20px rgba(0,0,0,.5); }
-    input, select, button { display:block; width:100%; padding:10px; margin:8px 0; border-radius:6px; border: none; }
+    input, button { display:block; width:100%; padding:10px; margin:8px 0; border-radius:6px; border: none; }
     button { background:#2e8b57; color:white; cursor:pointer; font-weight:600; }
+    .reset-btn { background:#b22222; } /* red for reset */
     .progress-log { max-height:150px; overflow:auto; font-size:0.9rem; text-align:left; background:#111; padding:10px; border-radius:6px; }
-    .small { font-size:0.9rem; color:#aaa; }
     #feedback { margin-top:8px; font-weight:bold; }
-    #leaderboard table { width:100%; border-collapse:collapse; }
-    #leaderboard th, #leaderboard td { border-bottom:1px solid #444; padding:6px; text-align:left; }
   </style>
 </head>
 <body>
@@ -21,19 +19,9 @@
   <div class="card" id="loginScreen">
     <h2>Team Login</h2>
     <input id="teamName" placeholder="Team name (unique)" />
-    <select id="course">
-      <option value="">Select course</option>
-      <option value="A">Course A</option>
-      <option value="B">Course B</option>
-      <option value="C">Course C</option>
-      <option value="D">Course D</option>
-    </select>
     <button id="startBtn">Start Game</button>
+    <button id="resetBtn" class="reset-btn">Reset Progress</button>
     <p class="small">Good luck!</p>
-    <hr>
-    <h3>Admin Login</h3>
-    <input id="adminPass" type="password" placeholder="Admin password" />
-    <button id="adminBtn">View Leaderboard</button>
   </div>
 
   <!-- Game screen -->
@@ -49,21 +37,9 @@
     </div>
   </div>
 
-  <!-- Leaderboard -->
-  <div class="card" id="leaderboard" style="display:none;">
-    <h2>Leaderboard</h2>
-    <table>
-      <thead><tr><th>Team</th><th>Course</th><th>Progress</th><th>Last Solved</th></tr></thead>
-      <tbody id="leaderboardBody"></tbody>
-    </table>
-    <button onclick="backToLogin()">Back</button>
-  </div>
-
 <script>
 let questions = [];
-const courses = { A:1, B:4, C:7, D:10 }; // starting indices (0-based)
-const teams = {}; // { teamName: {course, index, log, lastSolved} }
-
+let teams = {}; // { teamName: { index, log, finished } }
 let currentTeam = null;
 
 // Load questions
@@ -72,33 +48,42 @@ fetch('questions.json')
   .then(data => { questions = data; })
   .catch(err => console.error("Failed to load questions.json", err));
 
+// Load from localStorage
+if (localStorage.getItem("teamsData")) {
+  try {
+    teams = JSON.parse(localStorage.getItem("teamsData"));
+  } catch(e) {
+    teams = {};
+  }
+}
+
+function saveTeams() {
+  localStorage.setItem("teamsData", JSON.stringify(teams));
+}
+
 const loginScreen = document.getElementById('loginScreen');
 const gameScreen = document.getElementById('gameScreen');
-const leaderboard = document.getElementById('leaderboard');
 
 const teamNameInput = document.getElementById('teamName');
-const courseSelect = document.getElementById('course');
 const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
 const answerInput = document.getElementById('answerInput');
 const submitBtn = document.getElementById('submitBtn');
 const progressLogEl = document.getElementById('progressLog');
 const locationTitle = document.getElementById('locationTitle');
 const questionText = document.getElementById('questionText');
 const feedbackEl = document.getElementById('feedback');
-const adminBtn = document.getElementById('adminBtn');
-const adminPass = document.getElementById('adminPass');
-const leaderboardBody = document.getElementById('leaderboardBody');
 
 // Start game
 startBtn.addEventListener('click', () => {
   const name = teamNameInput.value.trim();
-  const course = courseSelect.value;
-  if (!name || !course) return alert('Enter team name and choose course');
+  if (!name) return alert('Enter a team name');
   if (!questions.length) return alert('Questions not loaded yet');
 
   currentTeam = name;
   if (!teams[name]) {
-    teams[name] = { course, index: courses[course], log: [], lastSolved:null };
+    teams[name] = { index: 0, log: [], finished: false };
+    saveTeams();
   }
 
   loginScreen.style.display='none';
@@ -107,34 +92,56 @@ startBtn.addEventListener('click', () => {
   updateProgressLogUI();
 });
 
+// Reset progress for entered team
+resetBtn.addEventListener('click', () => {
+  const name = teamNameInput.value.trim();
+  if (!name) return alert('Enter the team name to reset');
+  if (teams[name]) {
+    if (confirm(`Reset progress for team "${name}"?`)) {
+      delete teams[name];
+      saveTeams();
+      alert(`Progress for "${name}" has been reset.`);
+    }
+  } else {
+    alert(`No saved progress for "${name}"`);
+  }
+});
+
 // Show question
 function showQuestion() {
   const t = teams[currentTeam];
-  if (t.index >= questions.length) {
-    locationTitle.textContent = "🎉 Finished!";
-    questionText.textContent = "You’ve completed all questions!";
+  if (t.finished || t.index >= questions.length) {
+    locationTitle.textContent = "🎉 Congrats!";
+    questionText.textContent = "You’ve completed all 12 questions!";
     answerInput.style.display='none';
     submitBtn.style.display='none';
     return;
   }
   const q = questions[t.index];
-  locationTitle.textContent = `${q.location} (Point ${t.index+1})`;
+  locationTitle.textContent = `${q.location} (Question ${t.index+1} of ${questions.length})`;
   questionText.textContent = q.question;
   answerInput.value='';
   feedbackEl.textContent='';
+  answerInput.style.display='block';
+  submitBtn.style.display='block';
 }
 
 // Submit answer
 submitBtn.addEventListener('click', () => {
   const t = teams[currentTeam];
+  if (t.finished) return;
+
   const q = questions[t.index];
   const ans = answerInput.value.trim().toLowerCase();
   if (!ans) return;
   if (ans === q.answer.toLowerCase()) {
     const ts = new Date().toLocaleTimeString();
     t.log.push(`✔ ${q.location} solved at ${ts}`);
-    t.lastSolved = ts;
     t.index++;
+    if (t.index >= questions.length) {
+      t.finished = true;
+    }
+    saveTeams();
     feedbackEl.textContent = "✅ Correct!";
     showQuestion();
     updateProgressLogUI();
@@ -147,38 +154,6 @@ submitBtn.addEventListener('click', () => {
 function updateProgressLogUI() {
   const t = teams[currentTeam];
   progressLogEl.innerHTML = t.log.slice().reverse().map(a=>`<div>${a}</div>`).join('');
-}
-
-// Admin login
-adminBtn.addEventListener('click', () => {
-  if (adminPass.value === "hunter2") { // change password here
-    loginScreen.style.display='none';
-    leaderboard.style.display='block';
-    renderLeaderboard();
-  } else {
-    alert("Wrong password");
-  }
-});
-
-// Render leaderboard
-function renderLeaderboard() {
-  leaderboardBody.innerHTML = '';
-  const rows = Object.entries(teams).map(([name, t]) => {
-    const progress = `${t.index - courses[t.course]} / ${questions.length - courses[t.course]}`;
-    return `<tr>
-      <td>${name}</td>
-      <td>${t.course}</td>
-      <td>${progress}</td>
-      <td>${t.lastSolved || "-"}</td>
-    </tr>`;
-  });
-  leaderboardBody.innerHTML = rows.join('');
-}
-
-// Back button
-function backToLogin() {
-  leaderboard.style.display='none';
-  loginScreen.style.display='block';
 }
 </script>
 </body>
