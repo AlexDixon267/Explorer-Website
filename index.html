@@ -5,67 +5,13 @@
   <title>Scavenger Hunt</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      background:#121212; 
-      color:#eee; 
-      display:flex; 
-      align-items:center; 
-      justify-content:center; 
-      min-height:100vh; 
-    }
-    .card { 
-      background:#1f1f1f; 
-      padding:20px; 
-      border-radius:12px; 
-      width:420px; 
-      box-shadow:0 6px 20px rgba(0,0,0,.5); 
-      text-align:center;
-    }
-    input, button { 
-      display:block; 
-      width:100%; 
-      padding:10px; 
-      margin:8px 0; 
-      border-radius:6px; 
-      border: none; 
-    }
-    button { 
-      background:#2e8b57; 
-      color:white; 
-      cursor:pointer; 
-      font-weight:600; 
-    }
-    button.reset-btn { 
-      background:#b22222; 
-    }
-    .progress-log { 
-      max-height:150px; 
-      overflow:auto; 
-      font-size:0.9rem; 
-      text-align:left; 
-      background:#111; 
-      padding:10px; 
-      border-radius:6px; 
-      margin-top:10px;
-    }
-    #feedback { 
-      margin-top:8px; 
-      font-weight:bold; 
-    }
-    #feedback.correct { color: #4caf50; }  /* green */
-    #feedback.incorrect { color: #f44336; } /* red */
-    .team-banner {
-      font-size:1.2rem; 
-      font-weight:bold; 
-      margin-bottom:12px; 
-      color:#2e8b57;
-    }
-    .finished {
-      font-size:1.3rem;
-      margin-top:20px;
-      color:#ffd700;
-    }
+    body { font-family: Arial, sans-serif; background:#121212; color:#eee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .card { background:#1f1f1f; padding:20px; border-radius:12px; width:420px; box-shadow:0 6px 20px rgba(0,0,0,.5); }
+    input, select, button { display:block; width:100%; padding:10px; margin:8px 0; border-radius:6px; border: none; }
+    button { background:#2e8b57; color:white; cursor:pointer; font-weight:600; }
+    .reset-btn { background:#b22222; }
+    .progress-log { max-height:150px; overflow:auto; font-size:0.9rem; text-align:left; background:#111; padding:10px; border-radius:6px; }
+    #feedback { margin-top:8px; font-weight:bold; }
   </style>
 </head>
 <body>
@@ -73,6 +19,13 @@
   <div class="card" id="loginScreen">
     <h2>Team Login</h2>
     <input id="teamName" placeholder="Team name (unique)" />
+    <select id="courseSelect">
+      <option value="">Select starting course</option>
+      <option value="A">Course A</option>
+      <option value="B">Course B</option>
+      <option value="C">Course C</option>
+      <option value="D">Course D</option>
+    </select>
     <button id="startBtn">Start Game</button>
     <button id="resetBtn" class="reset-btn">Reset Progress</button>
     <p class="small">Good luck!</p>
@@ -80,19 +33,25 @@
 
   <!-- Game screen -->
   <div class="card" id="gameScreen" style="display:none;">
-    <div class="team-banner" id="teamBanner"></div>
-    <h2 id="locationTitle">Location</h2>
+    <h2 id="welcomeTitle"></h2>
+    <h3 id="locationTitle">Location</h3>
     <p id="questionText"></p>
     <input id="answerInput" placeholder="Your answer" />
     <button id="submitBtn">Submit</button>
     <div id="feedback"></div>
-    <div class="progress-log" id="progressLog"></div>
+    <div style="margin-top:12px;">
+      <div class="small">Progress log:</div>
+      <div id="progressLog" class="progress-log"></div>
+    </div>
   </div>
 
 <script>
 let questions = [];
-let teams = {}; // { teamName: { index, log, finished } }
+let teams = {}; // { teamName: { course, index, log, finished } }
 let currentTeam = null;
+
+const startingPoints = { A:1, B:4, C:7, D:10 }; 
+// zero-based index → Q2 = index 1, Q5 = index 4, etc.
 
 // Load questions
 fetch('questions.json')
@@ -117,6 +76,7 @@ const loginScreen = document.getElementById('loginScreen');
 const gameScreen = document.getElementById('gameScreen');
 
 const teamNameInput = document.getElementById('teamName');
+const courseSelect = document.getElementById('courseSelect');
 const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 const answerInput = document.getElementById('answerInput');
@@ -125,23 +85,29 @@ const progressLogEl = document.getElementById('progressLog');
 const locationTitle = document.getElementById('locationTitle');
 const questionText = document.getElementById('questionText');
 const feedbackEl = document.getElementById('feedback');
-const teamBanner = document.getElementById('teamBanner');
+const welcomeTitle = document.getElementById('welcomeTitle');
 
 // Start game
 startBtn.addEventListener('click', () => {
   const name = teamNameInput.value.trim();
-  if (!name) return alert('Enter a team name');
+  const course = courseSelect.value;
+  if (!name || !course) return alert('Enter a team name and choose a course');
   if (!questions.length) return alert('Questions not loaded yet');
 
   currentTeam = name;
   if (!teams[name]) {
-    teams[name] = { index: 0, log: [], finished: false };
+    teams[name] = { 
+      course, 
+      index: startingPoints[course], 
+      log: [], 
+      finished: false 
+    };
     saveTeams();
   }
 
-  teamBanner.textContent = `Team: ${currentTeam}`;
   loginScreen.style.display='none';
   gameScreen.style.display='block';
+  welcomeTitle.textContent = `Team: ${currentTeam} (Course ${teams[name].course})`;
   showQuestion();
   updateProgressLogUI();
 });
@@ -165,13 +131,10 @@ resetBtn.addEventListener('click', () => {
 function showQuestion() {
   const t = teams[currentTeam];
   if (t.finished || t.index >= questions.length) {
-    locationTitle.textContent = "🎉 Finished!";
-    questionText.textContent = "";
+    locationTitle.textContent = "🎉 Congrats!";
+    questionText.textContent = "You’ve completed all your questions!";
     answerInput.style.display='none';
     submitBtn.style.display='none';
-    feedbackEl.className="";
-    feedbackEl.textContent = "";
-    gameScreen.innerHTML += `<div class="finished">🎉 Congrats, ${currentTeam}! You’ve completed all ${questions.length} questions!</div>`;
     return;
   }
   const q = questions[t.index];
@@ -179,7 +142,6 @@ function showQuestion() {
   questionText.textContent = q.question;
   answerInput.value='';
   feedbackEl.textContent='';
-  feedbackEl.className='';
   answerInput.style.display='block';
   submitBtn.style.display='block';
 }
@@ -201,12 +163,10 @@ submitBtn.addEventListener('click', () => {
     }
     saveTeams();
     feedbackEl.textContent = "✅ Correct!";
-    feedbackEl.className = "correct";
     showQuestion();
     updateProgressLogUI();
   } else {
     feedbackEl.textContent = "❌ Incorrect, try again.";
-    feedbackEl.className = "incorrect";
   }
 });
 
