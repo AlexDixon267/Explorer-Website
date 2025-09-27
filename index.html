@@ -1,93 +1,245 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Game Login</title>
+  <meta charset="utf-8" />
+  <title>Scavenger Game</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #222;
-      color: #eee;
-      display: flex;
-      height: 100vh;
-      justify-content: center;
-      align-items: center;
-    }
-    .login-box {
-      background: #333;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
-      width: 300px;
-      text-align: center;
-    }
-    input, select, button {
-      margin: 0.5rem 0;
-      padding: 0.5rem;
-      width: 100%;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      background: #4CAF50;
-      color: white;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    button:hover {
-      background: #45a049;
-    }
+    body { font-family: Arial, sans-serif; background:#121212; color:#eee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .card { background:#1f1f1f; padding:20px; border-radius:12px; width:420px; box-shadow:0 6px 20px rgba(0,0,0,.5); }
+    input, select, button { display:block; width:100%; padding:10px; margin:8px 0; border-radius:6px; border: none; }
+    button { background:#2e8b57; color:white; cursor:pointer; font-weight:600; }
+    .progress-log { max-height:150px; overflow:auto; font-size:0.9rem; text-align:left; background:#111; padding:10px; border-radius:6px; }
+    .small { font-size:0.9rem; color:#aaa; }
   </style>
 </head>
 <body>
-  <div class="login-box">
+  <div class="card" id="loginScreen">
     <h2>Team Login</h2>
-    <form id="loginForm">
-      <input type="text" id="teamName" placeholder="Enter Team Name" required />
-      <select id="course" required>
-        <option value="">Select Course</option>
-        <option value="A">Course A</option>
-        <option value="B">Course B</option>
-        <option value="C">Course C</option>
-        <option value="D">Course D</option>
-      </select>
-      <button type="submit">Enter</button>
-    </form>
+    <input id="teamName" placeholder="Team name (unique)" />
+    <select id="course">
+      <option value="">Select course</option>
+      <option value="A">Course A</option>
+      <option value="B">Course B</option>
+      <option value="C">Course C</option>
+      <option value="D">Course D</option>
+    </select>
+    <button id="startBtn">Start Game</button>
+    <p class="small">Note: progress is saved locally and sent to a master Google Sheet for live tracking.</p>
+  </div>
+
+  <div class="card" id="gameScreen" style="display:none;">
+    <h2 id="locationTitle">Location</h2>
+    <p id="questionText"></p>
+
+    <input id="answerInput" placeholder="Your answer" />
+    <button id="submitBtn">Submit</button>
+
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button id="saveLocBtn" style="flex:1; background:#4a7bdc;">Save progress (manual)</button>
+      <button id="adminViewBtn" style="flex:1; background:#6c6c6c;">Admin: Refresh scoreboard</button>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div class="small">Progress log (local):</div>
+      <div id="progressLog" class="progress-log"></div>
+    </div>
   </div>
 
   <script>
-    document.getElementById("loginForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      
-      const teamName = document.getElementById("teamName").value.trim();
-      const course = document.getElementById("course").value;
+    // CONFIG - <--- SET THESE
+    const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbypVK2U_QU28TqJWYhiIB_DVKtUoDUjM107HsQAcYSyWpjbIuupF85aX1pz4bHrOeBT_A/exec'; // e.g. https://script.google.com/macros/s/AAA.../exec
+    const WEBHOOK_KEY = 'x38g7aWj9NaP5bPQSAngzkKQnzI4l7DXoehSh8UwgNHQBOP4sSXYMSEYRz6xLa';
+    // END CONFIG
 
-      if (!teamName || !course) {
-        alert("Please enter your team name and select a course.");
-        return;
+    // Hard-coded questions (12) and course start indexes (0-based)
+    const questions = [
+      {location: "Location 1", question: "Question for location 1", answer: "one"},
+      {location: "Location 2", question: "Question for location 2", answer: "two"},
+      {location: "Location 3", question: "Question for location 3", answer: "three"},
+      {location: "Location 4", question: "Question for location 4", answer: "four"},
+      {location: "Location 5", question: "Question for location 5", answer: "five"},
+      {location: "Location 6", question: "Question for location 6", answer: "six"},
+      {location: "Location 7", question: "Question for location 7", answer: "seven"},
+      {location: "Location 8", question: "Question for location 8", answer: "eight"},
+      {location: "Location 9", question: "Question for location 9", answer: "nine"},
+      {location: "Location 10", question: "Question for location 10", answer: "ten"},
+      {location: "Location 11", question: "Question for location 11", answer: "eleven"},
+      {location: "Location 12", question: "Question for location 12", answer: "twelve"}
+    ];
+    const courseStarts = { A: 2, B: 5, C: 8, D: 11 };
+
+    // State
+    let currentTeam = '';
+    let currentIndex = 0;
+    const lsKeyPrefix = 'scav_';
+
+    // DOM refs
+    const loginScreen = document.getElementById('loginScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const teamNameInput = document.getElementById('teamName');
+    const courseSelect = document.getElementById('course');
+    const startBtn = document.getElementById('startBtn');
+    const locationTitle = document.getElementById('locationTitle');
+    const questionText = document.getElementById('questionText');
+    const answerInput = document.getElementById('answerInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressLogEl = document.getElementById('progressLog');
+    const saveLocBtn = document.getElementById('saveLocBtn');
+    const adminViewBtn = document.getElementById('adminViewBtn');
+
+    // Utility: local storage helpers
+    function saveLocalProgress() {
+      const data = {
+        currentIndex,
+        log: getLocalLog()
+      };
+      localStorage.setItem(lsKeyPrefix + currentTeam, JSON.stringify(data));
+    }
+    function loadLocalProgress(team) {
+      const raw = localStorage.getItem(lsKeyPrefix + team);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch(e){ return null; }
+    }
+    function pushLocalLog(entry) {
+      const key = lsKeyPrefix + currentTeam + '_log';
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      arr.push(entry);
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+    function getLocalLog() {
+      return JSON.parse(localStorage.getItem(lsKeyPrefix + currentTeam + '_log') || '[]');
+    }
+    function updateProgressLogUI() {
+      const arr = getLocalLog();
+      progressLogEl.innerHTML = arr.map(a => `<div>${a}</div>`).reverse().join('');
+    }
+
+    // Hook up start
+    startBtn.addEventListener('click', () => {
+      const name = teamNameInput.value.trim();
+      const course = courseSelect.value;
+      if (!name || !course) return alert('Enter team name and choose course');
+
+      currentTeam = name;
+      const saved = loadLocalProgress(currentTeam);
+      if (saved) {
+        currentIndex = saved.currentIndex;
+      } else {
+        currentIndex = courseStarts[course];
+        // init
+        localStorage.setItem(lsKeyPrefix + currentTeam + '_log', JSON.stringify([]));
+        saveLocalProgress();
+        // send a "start" row to sheet
+        sendToSheet({ action: 'start', notes: `Started on course ${course}` });
       }
 
-      // Store team name in local storage (so next page can use it if needed)
-      localStorage.setItem("teamName", teamName);
+      loginScreen.style.display = 'none';
+      gameScreen.style.display = 'block';
+      showQuestion();
+      updateProgressLogUI();
+    });
 
-      // Redirect to different course pages
-      switch(course) {
-        case "A":
-          window.location.href = "courseA.html";
-          break;
-        case "B":
-          window.location.href = "courseB.html";
-          break;
-        case "C":
-          window.location.href = "courseC.html";
-          break;
-        case "D":
-          window.location.href = "courseD.html";
-          break;
-        default:
-          alert("Invalid course selection.");
+    // Show question
+    function showQuestion() {
+      const q = questions[currentIndex];
+      locationTitle.textContent = `${q.location} (Point ${currentIndex + 1})`;
+      questionText.textContent = q.question;
+      answerInput.value = '';
+    }
+
+    // Submit answer
+    submitBtn.addEventListener('click', async () => {
+      const q = questions[currentIndex];
+      const answer = answerInput.value.trim().toLowerCase();
+      if (!answer) return alert('Enter an answer');
+
+      if (answer === q.answer.toLowerCase()) {
+        const ts = new Date().toLocaleString();
+        const entry = `✔ ${q.location} solved at ${ts}`;
+        pushLocalLog(entry);
+        saveLocalProgress();
+
+        // log to sheet
+        await sendToSheet({ action: 'solved', notes: `Solved point ${currentIndex + 1}`, locationName: q.location });
+
+        alert('Correct! Moving on.');
+        currentIndex = (currentIndex + 1) % questions.length;
+        saveLocalProgress();
+        showQuestion();
+        updateProgressLogUI();
+      } else {
+        alert('Incorrect — try again.');
+        // Optional: log wrong attempts
+        await sendToSheet({ action: 'wrong', notes: `Wrong attempt at point ${currentIndex + 1}` });
       }
     });
+
+    // Manual save button
+    saveLocBtn.addEventListener('click', () => {
+      const q = questions[currentIndex];
+      const ts = new Date().toLocaleString();
+      pushLocalLog(`Saved progress at ${q.location} (${ts})`);
+      saveLocalProgress();
+      sendToSheet({ action: 'manual-save', notes: `Manual save at ${q.location}`, locationName: q.location });
+      updateProgressLogUI();
+      alert('Progress saved (local + master).');
+    });
+
+    // Admin refresh
+    adminViewBtn.addEventListener('click', async () => {
+      try {
+        const url = SHEET_WEBAPP_URL;
+        const res = await fetch(url);
+        const j = await res.json();
+        if (!j.success) return alert('Failed to fetch scoreboard: ' + j.message);
+        // show a simple popup table
+        const rows = j.rows;
+        let txt = 'Master scoreboard (recent first):\n\n';
+        rows.slice(-50).reverse().forEach(r => {
+          txt += `${r.Timestamp} — ${r.Team} — ${r.Course} — ${r.LocationName || ''} — ${r.Action} — ${r.Notes}\n`;
+        });
+        alert(txt);
+      } catch (err) {
+        alert('Error fetching scoreboard: ' + err.message);
+      }
+    });
+
+    // Send an object to the webapp
+    async function sendToSheet({ action = 'update', notes = '', locationName = '', locationIndex = null }) {
+      if (!SHEET_WEBAPP_URL || !WEBHOOK_KEY) {
+        console.warn('No sheet URL or key configured; skipping remote log.');
+        return;
+      }
+      const payload = {
+        key: WEBHOOK_KEY,
+        team: currentTeam,
+        course: courseSelect.value || '',
+        locationIndex: (locationIndex !== null ? locationIndex : currentIndex),
+        locationName: locationName || (questions[currentIndex] && questions[currentIndex].location) || '',
+        action,
+        notes
+      };
+      try {
+        const resp = await fetch(SHEET_WEBAPP_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const j = await resp.json();
+        if (!j.success) {
+          console.warn('Sheet logging failed:', j.message);
+        }
+      } catch (err) {
+        console.warn('Failed to send to sheet:', err);
+      }
+    }
+
+    // Optional: auto-save progress to sheet every N minutes (disabled by default)
+    // setInterval(() => {
+    //   if (currentTeam) sendToSheet({ action: 'autosave', notes: 'Periodic autosave' });
+    // }, 1000 * 60 * 2); // every 2 minutes
   </script>
 </body>
 </html>
+
