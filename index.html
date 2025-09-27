@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Scavenger Game</title>
+  <title>Scavenger Hunt</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body { font-family: Arial, sans-serif; background:#121212; color:#eee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
@@ -11,9 +11,13 @@
     button { background:#2e8b57; color:white; cursor:pointer; font-weight:600; }
     .progress-log { max-height:150px; overflow:auto; font-size:0.9rem; text-align:left; background:#111; padding:10px; border-radius:6px; }
     .small { font-size:0.9rem; color:#aaa; }
+    #feedback { margin-top:8px; font-weight:bold; }
+    #leaderboard table { width:100%; border-collapse:collapse; }
+    #leaderboard th, #leaderboard td { border-bottom:1px solid #444; padding:6px; text-align:left; }
   </style>
 </head>
 <body>
+  <!-- Team login -->
   <div class="card" id="loginScreen">
     <h2>Team Login</h2>
     <input id="teamName" placeholder="Team name (unique)" />
@@ -25,227 +29,133 @@
       <option value="D">Course D</option>
     </select>
     <button id="startBtn">Start Game</button>
-    <p class="small">Note: progress is saved locally and sent to a master Google Sheet for live tracking.</p>
+    <p class="small">Good luck!</p>
+    <hr>
+    <h3>Admin Login</h3>
+    <input id="adminPass" type="password" placeholder="Admin password" />
+    <button id="adminBtn">View Leaderboard</button>
   </div>
 
+  <!-- Game screen -->
   <div class="card" id="gameScreen" style="display:none;">
     <h2 id="locationTitle">Location</h2>
     <p id="questionText"></p>
-
     <input id="answerInput" placeholder="Your answer" />
     <button id="submitBtn">Submit</button>
-
-    <div style="display:flex; gap:8px; margin-top:10px;">
-      <button id="saveLocBtn" style="flex:1; background:#4a7bdc;">Save progress (manual)</button>
-      <button id="adminViewBtn" style="flex:1; background:#6c6c6c;">Admin: Refresh scoreboard</button>
-      <button onclick="resetLocalProgress()">Reset Local Progress</button>
-    </div>
-
+    <div id="feedback"></div>
     <div style="margin-top:12px;">
-      <div class="small">Progress log (local):</div>
+      <div class="small">Progress log:</div>
       <div id="progressLog" class="progress-log"></div>
     </div>
   </div>
 
-  <script>
-    // CONFIG - <--- SET THESE
-    const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbypVK2U_QU28TqJWYhiIB_DVKtUoDUjM107HsQAcYSyWpjbIuupF85aX1pz4bHrOeBT_A/exec'; // e.g. https://script.google.com/macros/s/AAA.../exec
-    const WEBHOOK_KEY = 'x38g7aWj9NaP5bPQSAngzkKQnzI4l7DXoehSh8UwgNHQBOP4sSXYMSEYRz6xLa';
-    // END CONFIG
+  <!-- Leaderboard -->
+  <div class="card" id="leaderboard" style="display:none;">
+    <h2>Leaderboard</h2>
+    <table>
+      <thead><tr><th>Team</th><th>Course</th><th>Progress</th><th>Last Solved</th></tr></thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+    <button onclick="backToLogin()">Back</button>
+  </div>
 
-    // Hard-coded questions (12) and course start indexes (0-based)
-    const questions = [
-      {location: "Location 1", question: "Question for location 1", answer: "one"},
-      {location: "Location 2", question: "Question for location 2", answer: "two"},
-      {location: "Location 3", question: "Question for location 3", answer: "three"},
-      {location: "Location 4", question: "Question for location 4", answer: "four"},
-      {location: "Location 5", question: "Question for location 5", answer: "five"},
-      {location: "Location 6", question: "Question for location 6", answer: "six"},
-      {location: "Location 7", question: "Question for location 7", answer: "seven"},
-      {location: "Location 8", question: "Question for location 8", answer: "eight"},
-      {location: "Location 9", question: "Question for location 9", answer: "nine"},
-      {location: "Location 10", question: "Question for location 10", answer: "ten"},
-      {location: "Location 11", question: "Question for location 11", answer: "eleven"},
-      {location: "Location 12", question: "Question for location 12", answer: "twelve"}
-    ];
-    const courseStarts = { A: 2, B: 5, C: 8, D: 11 };
+<script>
+let questions = [];
+const courses = { A:1, B:4, C:7, D:10 }; // starting indices (0-based)
+const teams = {}; // { teamName: {course, index, log, lastSolved} }
 
-    // State
-    let currentTeam = '';
-    let currentIndex = 0;
-    const lsKeyPrefix = 'scav_';
+let currentTeam = null;
 
-    // DOM refs
-    const loginScreen = document.getElementById('loginScreen');
-    const gameScreen = document.getElementById('gameScreen');
-    const teamNameInput = document.getElementById('teamName');
-    const courseSelect = document.getElementById('course');
-    const startBtn = document.getElementById('startBtn');
-    const locationTitle = document.getElementById('locationTitle');
-    const questionText = document.getElementById('questionText');
-    const answerInput = document.getElementById('answerInput');
-    const submitBtn = document.getElementById('submitBtn');
-    const progressLogEl = document.getElementById('progressLog');
-    const saveLocBtn = document.getElementById('saveLocBtn');
-    const adminViewBtn = document.getElementById('adminViewBtn');
+// Load questions
+fetch('questions.json').then(r=>r.json()).then(data=>{ questions=data; });
 
-    function resetLocalProgress() {
-      localStorage.clear();
-      alert("Local progress cleared! Refresh the page to start over.");
-    }
-    
-    // Utility: local storage helpers
-    function saveLocalProgress() {
-      const data = {
-        currentIndex,
-        log: getLocalLog()
-      };
-      localStorage.setItem(lsKeyPrefix + currentTeam, JSON.stringify(data));
-    }
-    function loadLocalProgress(team) {
-      const raw = localStorage.getItem(lsKeyPrefix + team);
-      if (!raw) return null;
-      try { return JSON.parse(raw); } catch(e){ return null; }
-    }
-    function pushLocalLog(entry) {
-      const key = lsKeyPrefix + currentTeam + '_log';
-      const arr = JSON.parse(localStorage.getItem(key) || '[]');
-      arr.push(entry);
-      localStorage.setItem(key, JSON.stringify(arr));
-    }
-    function getLocalLog() {
-      return JSON.parse(localStorage.getItem(lsKeyPrefix + currentTeam + '_log') || '[]');
-    }
-    function updateProgressLogUI() {
-      const arr = getLocalLog();
-      progressLogEl.innerHTML = arr.map(a => `<div>${a}</div>`).reverse().join('');
-    }
+const loginScreen = document.getElementById('loginScreen');
+const gameScreen = document.getElementById('gameScreen');
+const leaderboard = document.getElementById('leaderboard');
 
-    // Hook up start
-    startBtn.addEventListener('click', () => {
-      const name = teamNameInput.value.trim();
-      const course = courseSelect.value;
-      if (!name || !course) return alert('Enter team name and choose course');
+const teamNameInput = document.getElementById('teamName');
+const courseSelect = document.getElementById('course');
+const startBtn = document.getElementById('startBtn');
+const answerInput = document.getElementById('answerInput');
+const submitBtn = document.getElementById('submitBtn');
+const progressLogEl = document.getElementById('progressLog');
+const locationTitle = document.getElementById('locationTitle');
+const questionText = document.getElementById('questionText');
+const feedbackEl = document.getElementById('feedback');
+const adminBtn = document.getElementById('adminBtn');
+const adminPass = document.getElementById('adminPass');
+const leaderboardBody = document.getElementById('leaderboardBody');
 
-      currentTeam = name;
-      const saved = loadLocalProgress(currentTeam);
-      if (saved) {
-        currentIndex = saved.currentIndex;
-      } else {
-        currentIndex = courseStarts[course];
-        // init
-        localStorage.setItem(lsKeyPrefix + currentTeam + '_log', JSON.stringify([]));
-        saveLocalProgress();
-        // send a "start" row to sheet
-        sendToSheet({ action: 'start', notes: `Started on course ${course}` });
-      }
+// Start game
+startBtn.addEventListener('click', () => {
+  const name = teamNameInput.value.trim();
+  const course = courseSelect.value;
+  if (!name || !course) return alert('Enter team name and choose course');
+  if (!questions.length) return alert('Questions not loaded yet');
 
-      loginScreen.style.display = 'none';
-      gameScreen.style.display = 'block';
-      showQuestion();
-      updateProgressLogUI();
-    });
+  currentTeam = name;
+  if (!teams[name]) {
+    teams[name] = { course, index: courses[course], log: [], lastSolved:null };
+  }
 
-    // Show question
-    function showQuestion() {
-      const q = questions[currentIndex];
-      locationTitle.textContent = `${q.location} (Point ${currentIndex + 1})`;
-      questionText.textContent = q.question;
-      answerInput.value = '';
-    }
+  loginScreen.style.display='none';
+  gameScreen.style.display='block';
+  showQuestion();
+  updateProgressLogUI();
+});
 
-    // Submit answer
-    submitBtn.addEventListener('click', async () => {
-      const q = questions[currentIndex];
-      const answer = answerInput.value.trim().toLowerCase();
-      if (!answer) return alert('Enter an answer');
+// Show question
+function showQuestion() {
+  const t = teams[currentTeam];
+  if (t.index >= questions.length) {
+    locationTitle.textContent = "🎉 Finished!";
+    questionText.textContent = "You’ve completed all questions!";
+    answerInput.style.display='none';
+    submitBtn.style.display='none';
+    return;
+  }
+  const q = questions[t.index];
+  locationTitle.textContent = `${q.location} (Point ${t.index+1})`;
+  questionText.textContent = q.question;
+  answerInput.value='';
+  feedbackEl.textContent='';
+}
 
-      if (answer === q.answer.toLowerCase()) {
-        const ts = new Date().toLocaleString();
-        const entry = `✔ ${q.location} solved at ${ts}`;
-        pushLocalLog(entry);
-        saveLocalProgress();
+// Submit answer
+submitBtn.addEventListener('click', () => {
+  const t = teams[currentTeam];
+  const q = questions[t.index];
+  const ans = answerInput.value.trim().toLowerCase();
+  if (!ans) return;
+  if (ans === q.answer.toLowerCase()) {
+    const ts = new Date().toLocaleTimeString();
+    t.log.push(`✔ ${q.location} solved at ${ts}`);
+    t.lastSolved = ts;
+    t.index++;
+    feedbackEl.textContent = "✅ Correct!";
+    showQuestion();
+    updateProgressLogUI();
+  } else {
+    feedbackEl.textContent = "❌ Incorrect, try again.";
+  }
+});
 
-        // log to sheet
-        await sendToSheet({ action: 'solved', notes: `Solved point ${currentIndex + 1}`, locationName: q.location });
+// Update log
+function updateProgressLogUI() {
+  const t = teams[currentTeam];
+  progressLogEl.innerHTML = t.log.slice().reverse().map(a=>`<div>${a}</div>`).join('');
+}
 
-        alert('Correct! Moving on.');
-        currentIndex = (currentIndex + 1) % questions.length;
-        saveLocalProgress();
-        showQuestion();
-        updateProgressLogUI();
-      } else {
-        alert('Incorrect — try again.');
-        // Optional: log wrong attempts
-        await sendToSheet({ action: 'wrong', notes: `Wrong attempt at point ${currentIndex + 1}` });
-      }
-    });
+// Admin login
+adminBtn.addEventListener('click', () => {
+  if (adminPass.value === "hunter2") { // change password here
+    loginScreen.style.display='none';
+    leaderboard.style.display='block';
+    renderLeaderboard();
+  } else {
+    alert("Wrong password");
+  }
+});
 
-    // Manual save button
-    saveLocBtn.addEventListener('click', () => {
-      const q = questions[currentIndex];
-      const ts = new Date().toLocaleString();
-      pushLocalLog(`Saved progress at ${q.location} (${ts})`);
-      saveLocalProgress();
-      sendToSheet({ action: 'manual-save', notes: `Manual save at ${q.location}`, locationName: q.location });
-      updateProgressLogUI();
-      alert('Progress saved (local + master).');
-    });
-
-    // Admin refresh
-    adminViewBtn.addEventListener('click', async () => {
-      try {
-        const url = SHEET_WEBAPP_URL;
-        const res = await fetch(url);
-        const j = await res.json();
-        if (!j.success) return alert('Failed to fetch scoreboard: ' + j.message);
-        // show a simple popup table
-        const rows = j.rows;
-        let txt = 'Master scoreboard (recent first):\n\n';
-        rows.slice(-50).reverse().forEach(r => {
-          txt += `${r.Timestamp} — ${r.Team} — ${r.Course} — ${r.LocationName || ''} — ${r.Action} — ${r.Notes}\n`;
-        });
-        alert(txt);
-      } catch (err) {
-        alert('Error fetching scoreboard: ' + err.message);
-      }
-    });
-
-    // Send an object to the webapp
-    async function sendToSheet({ action = 'update', notes = '', locationName = '', locationIndex = null }) {
-      if (!SHEET_WEBAPP_URL || !WEBHOOK_KEY) {
-        console.warn('No sheet URL or key configured; skipping remote log.');
-        return;
-      }
-      const payload = {
-        key: WEBHOOK_KEY,
-        team: currentTeam,
-        course: courseSelect.value || '',
-        locationIndex: (locationIndex !== null ? locationIndex : currentIndex),
-        locationName: locationName || (questions[currentIndex] && questions[currentIndex].location) || '',
-        action,
-        notes
-      };
-      try {
-        const resp = await fetch(SHEET_WEBAPP_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
-        });
-        const j = await resp.json();
-        if (!j.success) {
-          console.warn('Sheet logging failed:', j.message);
-        }
-      } catch (err) {
-        console.warn('Failed to send to sheet:', err);
-      }
-    }
-
-    // Optional: auto-save progress to sheet every N minutes (disabled by default)
-    // setInterval(() => {
-    //   if (currentTeam) sendToSheet({ action: 'autosave', notes: 'Periodic autosave' });
-    // }, 1000 * 60 * 2); // every 2 minutes
-  </script>
-</body>
-</html>
+function
 
