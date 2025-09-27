@@ -67,7 +67,10 @@ const teams = {}; // { teamName: {course, index, log, lastSolved} }
 let currentTeam = null;
 
 // Load questions
-fetch('questions.json').then(r=>r.json()).then(data=>{ questions=data; });
+fetch('questions.json')
+  .then(r => r.json())
+  .then(data => { questions = data; })
+  .catch(err => console.error("Failed to load questions.json", err));
 
 const loginScreen = document.getElementById('loginScreen');
 const gameScreen = document.getElementById('gameScreen');
@@ -157,9 +160,26 @@ adminBtn.addEventListener('click', () => {
   }
 });
 
+// Render leaderboard
 function renderLeaderboard() {
-  leaderboardBody.innerHTML='';
-  const rows = Object.entries(teams).map(([name,t])=>{
+  leaderboardBody.innerHTML = '';
+  const rows = Object.entries(teams).map(([name, t]) => {
+    const progress = `${t.index - courses[t.course]} / ${questions.length - courses[t.course]}`;
     return `<tr>
       <td>${name}</td>
+      <td>${t.course}</td>
+      <td>${progress}</td>
+      <td>${t.lastSolved || "-"}</td>
+    </tr>`;
+  });
+  leaderboardBody.innerHTML = rows.join('');
+}
 
+// Back button
+function backToLogin() {
+  leaderboard.style.display='none';
+  loginScreen.style.display='block';
+}
+</script>
+</body>
+</html>
