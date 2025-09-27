@@ -1,14 +1,14 @@
 [
-  { "location": "Grid Reference: 372079", "question": "There are two coats-of-arms on the 'tall' building, what animal is holding the bottom one up?", "answer": "dragon" },
-  { "location": "Grid Reference: 366050", "question": "As you come to a four-way crossroad, what does the shop adjacent to the church sell?", "answer": "cameras" },
-  { "location": "Grid Reference: 359028", "question": "There is a section of old ruined wall, now serving a new purpose. What is that purpose?", "answer": "memorial" },
-  { "location": "Grid Reference: 347030", "question": "In the square, there is a fountain, with a figure beside it. What was his elected position?", "answer": "academician" },
-  { "location": "Grid Reference: 357055", "question": "There is a shop specialising in furry creatures. What does the shop on its right sell?", "answer": "toys" },
-  { "location": "Grid Reference: 322072", "question": "Get up high for this one. With busses on your right, walk forwards. What do you walk into?", "answer": "bench" },
-  { "location": "Grid Reference: 343092", "question": "You'll come to a 'bridge' over the road. What is its name?", "answer": "victoria bar" },
-  { "location": "Grid Reference: 341059", "question": "Here you can see an alcohol distillery. What animal is it named after?", "answer": "owl" },
-  { "location": "Grid Reference: 376062", "question": "Find a large red door with a mighty emblem above it. What colour are the lions on the coat-of-arms?", "answer": "gold" },
-  { "location": "Grid Reference: 399073", "question": "On this street there is a national institution for something. What is that something?", "answer": "early music" },
-  { "location": "Grid Reference: 376044", "question": "You can walk all around this church. But who is it named after?", "answer": "saint andrew" },
-  { "location": "Grid Reference: 355045", "question": "You are on a famous road in York, and nearby there is a shop named after the road. What does it sell?", "answer": "teddy bears" }
+  { "name": "Cliffords Tower", "location": "Grid Reference: 372079", "question": "There are two coats-of-arms on the 'tall' building, what animal is holding the bottom one up?", "answer": "dragon" },
+  { "name": "Crossroads", "location": "Grid Reference: 366050", "question": "As you come to a four-way crossroad, what does the shop adjacent to the church sell?", "answer": "cameras" },
+  { "name": "War Memorial", "location": "Grid Reference: 359028", "question": "There is a section of old ruined wall, now serving a new purpose. What is that purpose?", "answer": "memorial" },
+  { "name": "Art Gallery", "location": "Grid Reference: 347030", "question": "In the square, there is a fountain, with a figure beside it. What was his elected position?", "answer": "academician" },
+  { "name": "Cat Shop", "location": "Grid Reference: 357055", "question": "There is a shop specialising in furry creatures. What does the shop on its right sell?", "answer": "toys" },
+  { "name": "Walls over Station", "location": "Grid Reference: 322072", "question": "Get up high for this one. With busses on your right, walk forwards. What do you walk into?", "answer": "bench" },
+  { "name": "Victoria Bar", "location": "Grid Reference: 343092", "question": "You'll come to a 'bridge' over the road. What is its name?", "answer": "victoria bar" },
+  { "name": "Hooting Owl Dist.", "location": "Grid Reference: 341059", "question": "Here you can see an alcohol distillery. What animal is it named after?", "answer": "owl" },
+  { "name": "Merchant Hall", "location": "Grid Reference: 376062", "question": "Find a large red door with a mighty emblem above it. What colour are the lions on the coat-of-arms?", "answer": "gold" },
+  { "name": "NCEM", "location": "Grid Reference: 399073", "question": "On this street there is a national institution for something. What is that something?", "answer": "early music" },
+  { "name": "St. Andrew's", "location": "Grid Reference: 376044", "question": "You can walk all around this church. But who is it named after?", "answer": "saint andrew" },
+  { "name": "Stonegate Teddies","location": "Grid Reference: 355045", "question": "You are on a famous road in York, and nearby there is a shop named after the road. What does it sell?", "answer": "teddy bears" }
 ]
