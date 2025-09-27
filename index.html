@@ -138,7 +138,7 @@ function showQuestion() {
     return;
   }
   const q = questions[t.index];
-  locationTitle.textContent = `${q.location} (Question ${t.index+1} of ${questions.length})`;
+  locationTitle.textContent = `${q.location}`;
   questionText.textContent = q.question;
   answerInput.value='';
   feedbackEl.textContent='';
