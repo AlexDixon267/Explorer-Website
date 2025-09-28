@@ -154,7 +154,7 @@ submitBtn.addEventListener('click', () => {
   const ans = answerInput.value.trim().toLowerCase();
   if(!ans) return;
 
-  if(ans.includes(q.answer.toLowerCase())){
+  if(q.answer.includes(ans)){
     const ts = new Date().toLocaleTimeString();
     t.log.push(`✔ ${q.location} solved at ${ts}`);
     t.index++;
