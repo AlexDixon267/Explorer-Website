@@ -47,10 +47,12 @@
 
 <script>
 // ----------------- CONFIG: Replace with your Google Form info -----------------
+// https://docs.google.com/forms/d/e/1FAIpQLSePVjz661Snvw37RbIWzl4cNqFZvlL2aP1oFlIscEsMyiq-Sg/viewform?usp=pp_url&entry.790722666=A&entry.1479422454=B&entry.1919119030=C&entry.1635599558=D
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSePVjz661Snvw37RbIWzl4cNqFZvlL2aP1oFlIscEsMyiq-Sg/formResponse';
 const FIELD_TEAM   = 'entry.790722666';
 const FIELD_LOCATION  = 'entry.1479422454';
-const FIELD_CORRECT = 'entry.1919119030';
+const FIELD_ANSWER = 'entry.1919119030';
+const FIELD_COR = 'entry.1635599558';
 // ------------------------------------------------------------------------------
 
 let questions = [];
@@ -168,7 +170,8 @@ submitBtn.addEventListener('click', () => {
     const fd = new FormData();
     fd.append(FIELD_TEAM, currentTeam);
     fd.append(FIELD_LOCATION, q.name);
-    fd.append(FIELD_CORRECT, "Yes");
+    fd.append(FIELD_ANSWER, ans);
+    fd.append(FIELD_COR, "Yes");
     fetch(FORM_URL, { method:'POST', body:fd }).catch(err=>console.warn("Logging error:", err));
 
   } else {
@@ -179,7 +182,8 @@ submitBtn.addEventListener('click', () => {
     const fd = new FormData();
     fd.append(FIELD_TEAM, currentTeam);
     fd.append(FIELD_LOCATION, q.name);
-    fd.append(FIELD_CORRECT, "No");
+    fd.append(FIELD_ANSWER, ans);
+    fd.append(FIELD_COR, "No");
     fetch(FORM_URL, { method:'POST', body:fd }).catch(err=>console.warn("Logging error:", err));
   }
 });
